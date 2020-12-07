@@ -21,7 +21,7 @@ public class Server {
                 Socket socket = server.accept();
                 try {
                     ServerSomething newUser = new ServerSomething(socket); // создаём коннект новичка
-                    serverList.add(newUser); //Добавляем в общий пул
+                    serverList.add(newUser); // Добавляем в общий пул
                 } catch (IOException e) {
                     socket.close();
                 }

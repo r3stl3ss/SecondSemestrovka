@@ -13,16 +13,10 @@ public class Room {
     //флажок
     Boolean flag = false;
     //количество людей для игры
-    Byte amountOfPlayers;
+    Short amountOfPlayers = null;
 
     //конструктор комнаты (листсам создаётся, нам нужен только номер)
     public Room(int number) {
         this.number = number;
-    }
-
-
-    //проверка чётности количетва юзеров комнаты
-    public boolean checkEven(){
-        return userList.size()%2 == 0;
     }
 }

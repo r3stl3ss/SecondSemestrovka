@@ -28,9 +28,6 @@ class ClientSomething {
             out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             this.roomNumber();// выбираем комнату
             this.pressNickname();// вводим ник в чате
-            if (out.equals("required roomsize")) {
-                pickAmountOfPlayers();
-            }
             new ReadMsg().start(); // запускаем потоки чтения и написания сообщений
             new WriteMsg().start();
         } catch (IOException e) {
@@ -40,7 +37,7 @@ class ClientSomething {
     }
 
     private void pressNickname() {
-        System.out.print("Press your nick: ");
+        System.out.print("Введите ник: ");
         try {
             nickname = inputUser.readLine();
             out.write("Здарова, " + nickname + "\n");
@@ -49,21 +46,11 @@ class ClientSomething {
         }
     }
 
-    private void pickAmountOfPlayers() {
-        System.out.print("Сколько людей будут играть в этой комнате: ");
-        try {
-            Byte amount = Byte.parseByte(inputUser.readLine());
-            out.write(amount);
-
-            out.flush();
-        } catch (IOException ignored) {
-        }
-    }
 
 
     //cпрашиваем к какой комнате коннектнуться
     public void roomNumber(){
-        System.out.println("Press room number: ");
+        System.out.println("Введите номер комнаты: ");
         try{
             int room = Integer.parseInt(inputUser.readLine());
             out.write(room + "\n");
@@ -116,6 +103,8 @@ class ClientSomething {
                         out.write("stop" + "\n");
                         ClientSomething.this.downService();
                         break;
+                    } else if (userWord.startsWith("/amount ")) {
+                        out.write(userWord + "\n");
                     } else {
                         out.write("(" + dtime + ") " + nickname + ": " + userWord + "\n"); // чтоб при написании сообщения было понятно, кем и когда
                     }

@@ -48,6 +48,7 @@ class ServerSomething extends Thread {
                                 Short wantedAmount = Short.parseShort(message.substring(8));
                                 if (wantedAmount >= 4) {
                                     this.room.amountOfPlayers = wantedAmount;
+                                    send("Когда в комнате наберётся " + this.room.amountOfPlayers + " человек, игра начнётся.");
                                     message = in.readLine();
                                 } else {
                                     send("В эту игру можно играть минимум вчетвером, поэтому комната расширена до четырёх человек.");
@@ -67,9 +68,11 @@ class ServerSomething extends Thread {
                     this.room.story.addStoryEl(message); //у нас всё записано
                     if (this.room.userList.size() == this.room.amountOfPlayers) {
                         for (ServerSomething vr: this.room.userList) {
-                            vr.send("В этот момент должна была начаться игра");
-                            //Game.start();
+                            this.room.playingRightNow = true;
+                            //vr.send("В этот момент должна была начаться игра");
                         }
+                        GameServer gp = new GameServer(socket, this.room);
+                        gp.start();
                     }
                     for (ServerSomething vr : this.room.userList) {  // отправляем всем в комнате юзера
                         vr.send(message); // всем отправляем
@@ -82,7 +85,7 @@ class ServerSomething extends Thread {
     }
 
     //получаем сообщение, выписываем его и чистим буфер
-    private void send(String msg) {
+    void send(String msg) {
         try {
             out.write(msg + "\n");
             out.flush();

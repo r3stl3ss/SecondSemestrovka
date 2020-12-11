@@ -11,9 +11,6 @@ class ClientSomething {
     private BufferedReader inputUser;
     private String nickname;
     private Room room;
-    private Date time;
-    private String dtime;
-    private SimpleDateFormat dt1;
 
     public ClientSomething(String addr, int port) {
         // пробуем коннектнуться
@@ -30,6 +27,7 @@ class ClientSomething {
             this.pressNickname();// вводим ник в чате
             new ReadMsg().start(); // запускаем потоки чтения и написания сообщений
             new WriteMsg().start();
+
         } catch (IOException e) {
             ClientSomething.this.downService(); // ошибка = отключение
         }
@@ -88,6 +86,8 @@ class ClientSomething {
             }
         }
     }
+    // TODO: в клиенте прописать ситуацию, в которой сообщение кэпа отличается от остальных сообщений, и отправлять его на сервер, а на сервере оно должно обрабатываться особым способом
+
 
     public class WriteMsg extends Thread {
         @Override
@@ -95,9 +95,6 @@ class ClientSomething {
             while (true) {
                 String userWord;
                 try {
-                    time = new Date();
-                    dt1 = new SimpleDateFormat("HH:mm:ss");
-                    dtime = dt1.format(time);
                     userWord = inputUser.readLine();
                     if (userWord.equals("stop")) { // работает стоп-слово
                         out.write("stop" + "\n");
@@ -106,7 +103,7 @@ class ClientSomething {
                     } else if (userWord.startsWith("/amount ")) {
                         out.write(userWord + "\n");
                     } else {
-                        out.write("(" + dtime + ") " + nickname + ": " + userWord + "\n"); // чтоб при написании сообщения было понятно, кем и когда
+                        out.write( nickname + ": " + userWord + "\n"); // чтоб при написании сообщения было понятно, кем и когда
                     }
                     out.flush();
                 } catch (IOException e) {

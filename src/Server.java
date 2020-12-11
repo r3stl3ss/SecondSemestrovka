@@ -1,6 +1,8 @@
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
@@ -10,7 +12,7 @@ public class Server {
     public static final int PORT = 12000;
     public static CopyOnWriteArrayList<ServerSomething> serverList = new CopyOnWriteArrayList<>(); // вы сказали, так хорошо. мы вам верим
     public static Story story;
-    public static ArrayList<Room> roomList = new ArrayList<>();
+    public static List<Room> roomList = Collections.synchronizedList(new ArrayList<Room>());
 
     public static void main(String[] args) throws IOException {
         ServerSocket server = new ServerSocket(PORT);

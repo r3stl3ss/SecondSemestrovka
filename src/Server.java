@@ -50,4 +50,9 @@ public class Server {
         //возвращаем
         return newRoom;
     }
+
+    public static String roomToString(Room room) {
+        String stringyRoom = "Идентификатор комнаты: " + room.number + "\nТекущее количество человек: " + room.userList.size() + "\nРазмер: " + room.amountOfPlayers + "\n";
+        return stringyRoom;
+    }
 }

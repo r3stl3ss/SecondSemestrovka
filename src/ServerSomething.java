@@ -73,18 +73,23 @@ class ServerSomething extends Thread {
                     }
                     System.out.println("Echoing: " + message); // дразнимся
                     this.room.story.addStoryEl(message); //у нас всё записано
+                    // начинаем подготовку к игре
                     if (this.room.userList.size() == this.room.amountOfPlayers) {
                         this.room.playingRightNow = true;
                         ArrayList<String> justWords = new ArrayList<>();
                         fillByWords(justWords);
                         Iterator<String> iter = justWords.iterator();
-                        List<ServerSomething> redTeam;
-                        List<ServerSomething> blueTeam;
+                        List<ServerSomething> redTeam = Collections.synchronizedList(new ArrayList<>());
+                        List<ServerSomething> blueTeam = Collections.synchronizedList(new ArrayList<>());
                         while (iter.hasNext()) { //генерация слов для игры
                             sendAll(iter.next());
                         }
                         ArrayList<PlayableWord> wordsForGame = makeWordsPlayable(justWords);
-                        divideOnTeams();
+                        divideOnTeams(redTeam, blueTeam);
+                        /*sendRedWords(wordsForGame);
+                        sendBlueWords(wordsForGame);
+                        sendKiller(wordsForGame);*/
+
                         // здесь игровой функционал
 
                     }
@@ -130,6 +135,7 @@ class ServerSomething extends Thread {
     private ArrayList<PlayableWord> makeWordsPlayable(ArrayList<String> wordsForThisGame) {
         double whoFirst = Math.random();
         ArrayList<PlayableWord> playableWords = new ArrayList<PlayableWord>();
+        Collections.shuffle(wordsForThisGame);
         for (int i = 0; i < 8; i++) {
             playableWords.add(new PlayableWord(wordsForThisGame.get(i), Color.red));
         }
@@ -149,38 +155,86 @@ class ServerSomething extends Thread {
         return playableWords;
     }
 
-    private void divideOnTeams() {
+    private void divideOnTeams(List<ServerSomething> redTeam, List<ServerSomething> blueTeam) {
         short peopleInTeam = (short)(this.room.amountOfPlayers / 2);
         Set<Integer> busyUsers = new HashSet<Integer>();
         int counter = 0;
         if (this.room.amountOfPlayers % 2 == 1) {
-            int marked = (int)Math.random()*this.room.amountOfPlayers;
-            if (Math.random() > 0.5) {
+            int marked = (int)(Math.random()*this.room.amountOfPlayers);
+            if (Math.random() > 0.5) { // если нечётное кол-во человек, рандомно определяем, куда пойдёт лишний
                 this.room.userList.get(marked).curTeam = Color.red;
             } else {
                 this.room.userList.get(marked).curTeam = Color.blue;
             }
             busyUsers.add(marked);
         }
-        while (counter < peopleInTeam) {
-            int marked = (int)Math.random()*this.room.amountOfPlayers;
+        while (counter < peopleInTeam) { // наполняем команду красных
+            int marked = (int)(Math.random()*this.room.amountOfPlayers);
             if (!busyUsers.contains(marked)) {
                 this.room.userList.get(marked).curTeam = Color.red;
                 busyUsers.add(marked);
                 counter++;
-            } else {
-                continue;
             }
         }
         counter = 0;
-        while (counter < peopleInTeam) {
-            int marked = (int)Math.random()*this.room.amountOfPlayers;
+        while (counter < peopleInTeam) { // наполняем команду синих
+            int marked = (int)(Math.random()*this.room.amountOfPlayers);
             if (!busyUsers.contains(marked)) {
                 this.room.userList.get(marked).curTeam = Color.blue;
                 busyUsers.add(marked);
                 counter++;
+            }
+        }
+        for (ServerSomething ss: this.room.userList) {
+            if (ss.curTeam == Color.red) {
+                redTeam.add(ss);
             } else {
-                continue;
+                blueTeam.add(ss);
+            }
+        }
+        blueTeam.get((int)(Math.random()*(blueTeam.size()))).isCap = true; // рандомно генерируем кэпов
+        redTeam.get((int)(Math.random()*(redTeam.size()))).isCap = true;
+        /*for (ServerSomething ss: blueTeam) { TODO: fix later
+            if (ss.isCap) {
+                send("Вы капитан синих!");
+            }
+        }
+        for (ServerSomething ss: redTeam) {
+            if (ss.isCap) {
+                send("Вы капитан красных!");
+            }
+        }*/
+    }
+
+    //три метода чисто для теста. nevermind
+    private void sendBlueWords(ArrayList<PlayableWord> wordList) {
+        for (ServerSomething ss: this.room.userList) {
+            if (ss.curTeam == Color.BLUE) {
+                for (PlayableWord pw: wordList) {
+                    if (pw.currentColor == Color.BLUE) {
+                        ss.send("Синее слово: " + pw.printWord(pw));
+                    }
+                }
+            }
+        }
+    }
+
+    private void sendRedWords(ArrayList<PlayableWord> wordList) {
+        for (ServerSomething ss: this.room.userList) {
+            if (ss.curTeam == Color.RED) {
+                for (PlayableWord pw: wordList) {
+                    if (pw.currentColor == Color.RED) {
+                        ss.send("Красное слово: " + pw.printWord(pw));
+                    }
+                }
+            }
+        }
+    }
+
+    private void sendKiller(ArrayList<PlayableWord> wordList) {
+        for (PlayableWord pw: wordList) {
+            if (pw.currentColor == Color.BLACK) {
+                sendAll("КИБОРГ-УБИЙЦА: " + pw.printWord(pw));
             }
         }
     }

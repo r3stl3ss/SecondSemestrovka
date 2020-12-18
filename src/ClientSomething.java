@@ -78,6 +78,13 @@ class ClientSomething {
                     if (str.equals("stop")) { // стоп-слово
                         ClientSomething.this.downService();
                         break;
+                    } else if (str.startsWith("(Капитан) ")) {
+                        if (str.substring(str.length() - 1).matches("[0-9]")) {
+                            System.out.println(str);
+                        } else {
+                            out.write("Неправильный формат подсказки, попробуйте заново");
+                            out.flush();
+                        }
                     }
                     System.out.println(str);
                 }
@@ -101,6 +108,8 @@ class ClientSomething {
                         ClientSomething.this.downService();
                         break;
                     } else if (userWord.startsWith("/amount ")) {
+                        out.write(userWord + "\n");
+                    } else if (userWord.startsWith("/confirm ")) {
                         out.write(userWord + "\n");
                     } else {
                         out.write( nickname + ": " + userWord + "\n"); // чтоб при написании сообщения было понятно, кем и когда

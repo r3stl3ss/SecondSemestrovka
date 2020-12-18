@@ -16,6 +16,13 @@ public class Room {
     //играет ли комната
     Boolean playingRightNow = false;
 
+    Boolean redCapCanPrint = false;
+
+    Boolean blueCapCanPrint = false;
+
+    List<ServerSomething> redTeam = Collections.synchronizedList(new ArrayList<>());
+    List<ServerSomething> blueTeam = Collections.synchronizedList(new ArrayList<>());
+
     //конструктор комнаты (лист сам создаётся, нам нужен только номер)
     public Room(short number) {
         this.number = number;

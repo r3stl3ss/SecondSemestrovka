@@ -1,3 +1,5 @@
+import com.sun.xml.internal.ws.api.model.wsdl.WSDLOutput;
+
 import java.awt.*;
 import java.io.*;
 import java.net.Socket;
@@ -10,7 +12,8 @@ class ServerSomething extends Thread {
     private BufferedReader in;
     private BufferedWriter out;
     private Color curTeam;
-    private boolean isCap;
+    private boolean isCap = false;
+    private boolean canWrite = true;
 
     //комната конкретного юзера
     private Room room;
@@ -78,20 +81,90 @@ class ServerSomething extends Thread {
                         this.room.playingRightNow = true;
                         ArrayList<String> justWords = new ArrayList<>();
                         fillByWords(justWords);
-                        Iterator<String> iter = justWords.iterator();
-                        List<ServerSomething> redTeam = Collections.synchronizedList(new ArrayList<>());
-                        List<ServerSomething> blueTeam = Collections.synchronizedList(new ArrayList<>());
-                        while (iter.hasNext()) { //генерация слов для игры
+                        //Iterator<String> iter = justWords.iterator();
+                        /*while (iter.hasNext()) { //генерация слов для игры
                             sendAll(iter.next());
-                        }
+                        }*/
                         ArrayList<PlayableWord> wordsForGame = makeWordsPlayable(justWords);
-                        divideOnTeams(redTeam, blueTeam);
-                        sendRedWords(wordsForGame);
+                        if (this.room.redTeam.isEmpty() && this.room.blueTeam.isEmpty()) {
+                            divideOnTeams(this.room.redTeam, this.room.blueTeam, wordsForGame);
+                        }
+                        if (this.isCap) {
+                            this.canWrite = false;
+                        }
+                        /*sendRedWords(wordsForGame);
                         sendBlueWords(wordsForGame);
-                        sendKiller(wordsForGame);
-                        findCap(redTeam, blueTeam);
+                        sendKiller(wordsForGame);*/
                         // здесь игровой функционал
-
+                        byte redWords = 0;
+                        for (PlayableWord pw: wordsForGame) {
+                            if (pw.currentColor == Color.red){
+                                redWords++;
+                            }
+                        }
+                        if (redWords == 9) {
+                            this.room.redCapCanPrint = true;
+                            while (this.room.playingRightNow) {
+                                message = in.readLine();
+                                if (message.startsWith("/confirm ")) {
+                                    PlayableWord word = checkWord(message, wordsForGame);
+                                    if (word.currentColor == Color.black) {
+                                        sendReds("Вы проиграли - это слово было убийцей.");
+                                        sendBlues("Вы выиграли - они нажали на убийцу.");
+                                        break;
+                                    } else if (word.currentColor == Color.white) {
+                                        sendReds("Это слово было нейтральным - ход оппонентов.");
+                                        sendBlues("Слово было нейтральным - ваш ход.");
+                                        wordsForGame.remove(word);
+                                        this.room.blueCapCanPrint = true;
+                                        continue;
+                                    } else if (word.currentColor == Color.blue) {
+                                        sendReds("Это слово было вашим - вы можете выбрать ещё.");
+                                        sendBlues("Они выбрали своё слово и теперь будут выбирать ещё.");
+                                        wordsForGame.remove(word);
+                                        continue;
+                                    } else if (word.currentColor == Color.red) {
+                                        sendReds("Это было вражеское слово! Теперь они ходят.");
+                                        sendBlues("Вам везёт - они выбрали ваше слово. Вы ходите.");
+                                        wordsForGame.remove(word);
+                                        this.room.blueCapCanPrint = true;
+                                        continue;
+                                    }
+                                }
+                                sendAllInGame(message);
+                            }
+                        } else {
+                            this.room.blueCapCanPrint = true;
+                            while (this.room.playingRightNow) {
+                                message = in.readLine();
+                                if (message.startsWith("/confirm ")) {
+                                    PlayableWord word = checkWord(message, wordsForGame);
+                                    if (word.currentColor == Color.black) {
+                                        sendBlues("Вы проиграли - это слово было убийцей.");
+                                        sendReds("Вы выиграли - они нажали на убийцу.");
+                                        break;
+                                    } else if (word.currentColor == Color.white) {
+                                        sendBlues("Это слово было нейтральным - ход оппонентов.");
+                                        sendReds("Слово было нейтральным - ваш ход.");
+                                        wordsForGame.remove(word);
+                                        this.room.redCapCanPrint = true;
+                                        continue;
+                                    } else if (word.currentColor == Color.blue) {
+                                        sendBlues("Это слово было вашим - вы можете выбрать ещё.");
+                                        sendReds("Они выбрали своё слово и теперь будут выбирать ещё.");
+                                        wordsForGame.remove(word);
+                                        continue;
+                                    } else if (word.currentColor == Color.red) {
+                                        sendBlues("Это было вражеское слово! Теперь они ходят.");
+                                        sendReds("Вам везёт - они выбрали ваше слово. Вы ходите.");
+                                        wordsForGame.remove(word);
+                                        this.room.redCapCanPrint = true;
+                                        continue;
+                                    }
+                                }
+                                sendAllInGame(message);
+                            }
+                        }
                     }
                     else {
                         sendAll(message); // а тут просто чатик
@@ -116,6 +189,55 @@ class ServerSomething extends Thread {
         for (ServerSomething vr : this.room.userList) {  // отправляем всем в комнате юзера
             vr.send(msg); // всем отправляем
         }
+    }
+
+    private void sendBlues(String msg) {
+        for (ServerSomething ss : this.room.userList) {  // отправляем всем в комнате юзера
+            if (ss.curTeam == Color.blue) {
+                ss.send(msg);
+            }
+        }
+    }
+
+    private void sendReds(String msg) {
+        for (ServerSomething ss : this.room.userList) {  // отправляем всем в комнате юзера
+            if (ss.curTeam == Color.red) {
+                ss.send(msg);
+            }
+        }
+    }
+
+    private void sendAllInGame(String msg) {
+        for (ServerSomething vr : this.room.userList) {// отправляем всем в комнате юзера
+            String prefixes = "";
+            if (this.isCap && this.curTeam == Color.red && this.room.redCapCanPrint) {
+                prefixes+= "(Капитан)(Красный) ";
+                this.room.redCapCanPrint = false;
+                vr.send(prefixes + msg);
+            } else if (this.isCap && this.curTeam == Color.blue && this.room.blueCapCanPrint) {
+                prefixes+= "(Капитан)(Синий) ";
+                this.room.blueCapCanPrint = false;
+                vr.send(prefixes + msg);
+            } else if (this.isCap && this.curTeam == Color.red) {
+
+            } else if (this.curTeam == Color.red) {
+                prefixes+= "(Красный) ";
+                vr.send(prefixes + msg);
+            } else {
+                prefixes += "(Синий) ";
+                vr.send(prefixes + msg);
+            }
+        }
+    }
+
+    private PlayableWord checkWord(String message, ArrayList<PlayableWord> words) {
+        String parsedMessage = message.substring(9);
+        for (PlayableWord pw: words) {
+            if (parsedMessage.equals(pw.word)) {
+                return pw;
+            }
+        }
+        return null;
     }
 
     private void fillByWords(ArrayList<String> wordListForGame) throws IOException {
@@ -155,45 +277,74 @@ class ServerSomething extends Thread {
         return playableWords;
     }
 
-    private void divideOnTeams(List<ServerSomething> redTeam, List<ServerSomething> blueTeam) {
-        short peopleInTeam = (short)(this.room.amountOfPlayers / 2);
-        Set<Short> busyUsers = new HashSet<Short>();
-        if (this.room.amountOfPlayers % 2 == 1) {
-            short marked = (short)(Math.random()*this.room.amountOfPlayers);
-            if (Math.random() > 0.5) { // если нечётное кол-во человек, рандомно определяем, куда пойдёт лишний
-                this.room.userList.get(marked).curTeam = Color.red;
-            } else {
-                this.room.userList.get(marked).curTeam = Color.blue;
-            }
-            busyUsers.add(marked);
-        }
-        while (redTeam.size() < peopleInTeam) { // наполняем команду красных
-            short marked = (short)(Math.random()*this.room.amountOfPlayers);
-            if (!busyUsers.contains(marked)) {
+    private void divideOnTeams(List<ServerSomething> redTeam, List<ServerSomething> blueTeam, ArrayList<PlayableWord> wordsForGame) {
+        if (!redTeam.isEmpty()) {
+            return;
+        } else {
+            short peopleInTeam = (short) (this.room.amountOfPlayers / 2);
+            Set<Short> busyUsers = new HashSet<Short>();
+            if (this.room.amountOfPlayers % 2 == 1) {
+                short marked = (short) (Math.random() * this.room.amountOfPlayers);
+                if (Math.random() > 0.5) { // если нечётное кол-во человек, рандомно определяем, куда пойдёт лишний
+                    this.room.userList.get(marked).curTeam = Color.red;
+                } else {
+                    this.room.userList.get(marked).curTeam = Color.blue;
+                }
                 busyUsers.add(marked);
-                redTeam.add(this.room.userList.get(marked));
+            }
+            while (redTeam.size() < peopleInTeam) { // наполняем команду красных
+                short marked = (short) (Math.random() * this.room.amountOfPlayers);
+                if (!busyUsers.contains(marked)) {
+                    busyUsers.add(marked);
+                    this.room.userList.get(marked).curTeam = Color.red;
+                    redTeam.add(this.room.userList.get(marked));
+                }
+            }
+            while (blueTeam.size() < peopleInTeam) { // наполняем команду синих
+                short marked = (short) (Math.random() * this.room.amountOfPlayers);
+                if (!busyUsers.contains(marked)) {
+                    busyUsers.add(marked);
+                    this.room.userList.get(marked).curTeam = Color.blue;
+                    blueTeam.add(this.room.userList.get(marked));
+                }
+            }
+            blueTeam.get((short) (Math.random() * (blueTeam.size()))).isCap = true; // рандомно генерируем кэпов
+            redTeam.get((short) (Math.random() * (redTeam.size()))).isCap = true;
+            for (ServerSomething ss : this.room.userList) {
+                if (ss.curTeam == Color.blue && ss.isCap) {
+                    ss.send("Вы капитан синих.");
+                } else if (ss.curTeam == Color.red && ss.isCap) {
+                    ss.send("Вы капитан красных.");
+                } else if (ss.curTeam == Color.red) {
+                    ss.send("Вы красный и вы отгадываете");
+                } else if (ss.curTeam == Color.blue) {
+                    ss.send("Вы синий и вы отгадываете");
+                }
+            }
+            String row = "";
+            for (ServerSomething ss : this.room.userList) {
+                if (ss.isCap) {
+                    ss.send("Таблица слов на эту игру: \n");
+                    for (int i = 0; i < 25; i++) {
+                        if (wordsForGame.get(i).currentColor == Color.red) {
+                            row += "к ";
+                        } else if (wordsForGame.get(i).currentColor == Color.blue) {
+                            row += "c ";
+                        } else if (wordsForGame.get(i).currentColor == Color.white) {
+                            row += "б ";
+                        } else {
+                            row += "ч ";
+                        }
+                        if (i % 5 == 4) {
+                            ss.send(row);
+                            row = "";
+                        }
+                    }
+                }
             }
         }
-        while (blueTeam.size() < peopleInTeam) { // наполняем команду синих
-            short marked = (short)(Math.random()*this.room.amountOfPlayers);
-            if (!busyUsers.contains(marked)) {
-                busyUsers.add(marked);
-                blueTeam.add(this.room.userList.get(marked));
-            }
-        }
-        blueTeam.get((short)(Math.random()*(blueTeam.size()))).isCap = true; // рандомно генерируем кэпов
-        redTeam.get((short)(Math.random()*(redTeam.size()))).isCap = true;
     }
 
-    private void findCap(List<ServerSomething> redTeam, List<ServerSomething> blueTeam) {
-        for (ServerSomething ss: this.room.userList) {
-            if (ss.curTeam == Color.blue && ss.isCap) {
-                ss.send("Вы глава гей-клуба.");
-            } else if (ss.curTeam == Color.red && ss.isCap) {
-                ss.send("Вы - Владимир Ильич Ленин.");
-            }
-        }
-    }
 
     //три метода чисто для теста. nevermind
     private void sendBlueWords(ArrayList<PlayableWord> wordList) {
@@ -227,6 +378,7 @@ class ServerSomething extends Thread {
             }
         }
     }
+
 
     //суицид
     private void downService() {

@@ -35,7 +35,7 @@ public class Server {
 
 
     //Возвращаем рум по номеру
-    public static Room getRoom(int number){
+    public static Room getRoom(short number){
         boolean hasRoom = false;
         for(Room room: roomList){
             if(room.number == number){

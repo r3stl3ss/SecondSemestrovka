@@ -6,7 +6,7 @@ public class Room {
     //класс, являющийся самой комнатой
 
     //номер комнаты
-    int number;
+    short number;
     //лист юзеров данной комнаты
     List<ServerSomething> userList = Collections.synchronizedList(new ArrayList<>());
     //история сообщений комнаты
@@ -17,7 +17,7 @@ public class Room {
     Boolean playingRightNow = false;
 
     //конструктор комнаты (лист сам создаётся, нам нужен только номер)
-    public Room(int number) {
+    public Room(short number) {
         this.number = number;
     }
 }

@@ -50,7 +50,7 @@ class ClientSomething {
     public void roomNumber(){
         System.out.println("Введите номер комнаты: ");
         try{
-            int room = Integer.parseInt(inputUser.readLine());
+            short room = Short.parseShort(inputUser.readLine());
             out.write(room + "\n");
             this.room = Server.getRoom(room);
         } catch (IOException ignored){

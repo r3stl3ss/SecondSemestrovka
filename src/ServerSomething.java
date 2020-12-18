@@ -29,9 +29,9 @@ class ServerSomething extends Thread {
         String message;
         //this.room - Объект room, то есть сама комната, просто room - номер комнаты
         //обработка служебных сообщений ведётся на сервере!
-        int room;
+        short room;
         try {
-            room = Integer.parseInt(in.readLine());
+            room = Short.parseShort(in.readLine());
             message = in.readLine();
             this.room = Server.getRoom(room);
             this.room.story.printStory(out);
@@ -86,10 +86,10 @@ class ServerSomething extends Thread {
                         }
                         ArrayList<PlayableWord> wordsForGame = makeWordsPlayable(justWords);
                         divideOnTeams(redTeam, blueTeam);
-                        /*sendRedWords(wordsForGame);
+                        sendRedWords(wordsForGame);
                         sendBlueWords(wordsForGame);
-                        sendKiller(wordsForGame);*/
-
+                        sendKiller(wordsForGame);
+                        findCap(redTeam, blueTeam);
                         // здесь игровой функционал
 
                     }
@@ -157,10 +157,9 @@ class ServerSomething extends Thread {
 
     private void divideOnTeams(List<ServerSomething> redTeam, List<ServerSomething> blueTeam) {
         short peopleInTeam = (short)(this.room.amountOfPlayers / 2);
-        Set<Integer> busyUsers = new HashSet<Integer>();
-        int counter = 0;
+        Set<Short> busyUsers = new HashSet<Short>();
         if (this.room.amountOfPlayers % 2 == 1) {
-            int marked = (int)(Math.random()*this.room.amountOfPlayers);
+            short marked = (short)(Math.random()*this.room.amountOfPlayers);
             if (Math.random() > 0.5) { // если нечётное кол-во человек, рандомно определяем, куда пойдёт лишний
                 this.room.userList.get(marked).curTeam = Color.red;
             } else {
@@ -168,42 +167,32 @@ class ServerSomething extends Thread {
             }
             busyUsers.add(marked);
         }
-        while (counter < peopleInTeam) { // наполняем команду красных
-            int marked = (int)(Math.random()*this.room.amountOfPlayers);
+        while (redTeam.size() < peopleInTeam) { // наполняем команду красных
+            short marked = (short)(Math.random()*this.room.amountOfPlayers);
             if (!busyUsers.contains(marked)) {
-                this.room.userList.get(marked).curTeam = Color.red;
                 busyUsers.add(marked);
-                counter++;
+                redTeam.add(this.room.userList.get(marked));
             }
         }
-        counter = 0;
-        while (counter < peopleInTeam) { // наполняем команду синих
-            int marked = (int)(Math.random()*this.room.amountOfPlayers);
+        while (blueTeam.size() < peopleInTeam) { // наполняем команду синих
+            short marked = (short)(Math.random()*this.room.amountOfPlayers);
             if (!busyUsers.contains(marked)) {
-                this.room.userList.get(marked).curTeam = Color.blue;
                 busyUsers.add(marked);
-                counter++;
+                blueTeam.add(this.room.userList.get(marked));
             }
         }
+        blueTeam.get((short)(Math.random()*(blueTeam.size()))).isCap = true; // рандомно генерируем кэпов
+        redTeam.get((short)(Math.random()*(redTeam.size()))).isCap = true;
+    }
+
+    private void findCap(List<ServerSomething> redTeam, List<ServerSomething> blueTeam) {
         for (ServerSomething ss: this.room.userList) {
-            if (ss.curTeam == Color.red) {
-                redTeam.add(ss);
-            } else {
-                blueTeam.add(ss);
+            if (ss.curTeam == Color.blue && ss.isCap) {
+                ss.send("Вы глава гей-клуба.");
+            } else if (ss.curTeam == Color.red && ss.isCap) {
+                ss.send("Вы - Владимир Ильич Ленин.");
             }
         }
-        blueTeam.get((int)(Math.random()*(blueTeam.size()))).isCap = true; // рандомно генерируем кэпов
-        redTeam.get((int)(Math.random()*(redTeam.size()))).isCap = true;
-        /*for (ServerSomething ss: blueTeam) { TODO: fix later
-            if (ss.isCap) {
-                send("Вы капитан синих!");
-            }
-        }
-        for (ServerSomething ss: redTeam) {
-            if (ss.isCap) {
-                send("Вы капитан красных!");
-            }
-        }*/
     }
 
     //три метода чисто для теста. nevermind
